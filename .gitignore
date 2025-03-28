@@ -4,3 +4,5 @@ temp/
 **/**/*.log
 config.js
 *.tar
+out/
+logs/

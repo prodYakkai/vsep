@@ -41,6 +41,7 @@ const renderProjectionMenu = (projections) => {
             `);
         projectionItem.on('click', () => {
             renderProjectionDetails(projection);
+            projectionItem.addClass('active').siblings().removeClass('active'); // Set active class for the clicked projection
         });
         projectionList.append(projectionItem);
     });

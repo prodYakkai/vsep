@@ -36,8 +36,8 @@ for monitor in "${monitors[@]}"; do
         
         # Launch Chromium window on the detected monitor
         /usr/bin/chromium-browser --chrome-frame -window-position=$x_offset,$y_offset \
-        --user-data-dir=/home/$(whoami)/.config/chromium/$monitor --window-size=$width,$height \
-        --app=file:///home/linux/ingester-web/dist/static/projection-whep.html\?id=$monitor --autoplay-policy=no-user-gesture-required --kiosk \
+        --user-data-dir=/home/$(whoami)/.config/chromium/$monitor --window-size=$width,$height --ignore-certificate-errors \
+        --app=file:///home/linux/vsep/dist/static/projection-whep.html\?id=$monitor --autoplay-policy=no-user-gesture-required --kiosk \
         --allow-hidden-media-playback --use-fake-ui-for-media-stream --test-type --suppress-badflags-warnings &
         
         # Store the PID of the launched Chromium process

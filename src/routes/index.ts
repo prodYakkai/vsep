@@ -288,6 +288,30 @@ apiRouter.post('/projection/:id/job',
     });
 });
 
+apiRouter.get('/reset_all',
+  async (req: Request, res: Response): Promise<void> => {
+    // This route will reset all projections
+    const [error, keys] = await safeAwait(redis.keys('projection:*'));
+    if (error) {
+      res.status(HttpStatusCodes.INTERNAL_SERVER_ERROR).send('Error retrieving projections');
+      return;
+    }
+    if (!keys || keys.length === 0) {
+      res.status(HttpStatusCodes.NOT_FOUND).send('No projections found to reset');
+      return;
+    }
+
+    for (const key of keys) {
+      await redis.del(key);
+    }
+
+    // Emit refresh to all sockets
+    io.sockets.emit('refresh_all');
+
+    res.status(HttpStatusCodes.OK).send('All projections have been reset');
+    // Note: This will reset all projections and clear their data.
+  });
+
 
 
 /******************************************************************************

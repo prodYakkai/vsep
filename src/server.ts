@@ -39,6 +39,10 @@ if (Env.NodeEnv === NodeEnvs.Production.valueOf()) {
 
 app.use(cors());
 // Add APIs, must be after middleware
+app.get('/ping', (_: Request, res: Response) => {
+  res.status(HttpStatusCodes.OK).json({ message: 'pong' });
+});  
+
 app.use('/api',BaseRouter);
 
 // Add error handler

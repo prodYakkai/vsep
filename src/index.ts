@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import './config';
 import logger from 'jet-logger';
+import process from 'node:process';
 
 import Env from '@src/common/Env';
 import app from './server';
@@ -13,7 +14,7 @@ import path from 'node:path';
 /******************************************************************************
                                   Run
 ******************************************************************************/
-
+process.title = "vsep-api"; // Set process title for easier identification in process list
 const SERVER_START_MSG = ('Express server started on port: ' + 
   Env.Port.toString());
 
@@ -23,7 +24,7 @@ const certFile = fs.readFileSync(path.join(__dirname + '/../keys/cert.crt'), 'ut
 export const server = createHttpsServer({
   key: keyFile,
   cert: certFile,
-}, app).listen(Env.Port, '0.0.0.0',async () => {
+}, app).listen(Env.Port, Env.Host,async () => {
   logger.imp(SERVER_START_MSG);
   await redis.connect();
 });
