@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ingest Control</title>
+    <link
+      rel="stylesheet"
+      href="/node_modules/bootstrap/dist/css/bootstrap.min.css"
+    />
+
+    <script src="/node_modules/jquery/dist/jquery.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Ingest Control <span id="connection-status"></span></h1>
+      <nav>
+        <div class="nav nav-tabs" id="nav-tab" role="tablist">
+        
+        </div>
+      </nav>
+      <div class="row">
+        <div class="col-md-12">
+          <div class="form-group">
+            <label for="url-input">Stream URL</label>
+            <input
+              type="text"
+              class="form-control"
+              id="url-input"
+              placeholder="Enter stream URL"
+            />
+            <label for="sink-select">Audio Device</label>
+            <select class="form-control" id="sink-select">
+            </select>
+          </div>
+          <div class="btn-group" role="group" aria-label="Control buttons">
+            <button type="button" class="btn btn-primary" id="flv-play">
+              FLV Play
+            </button>
+            <button type="button" class="btn btn-secondary" id="rtc-play">
+              RTC Play
+            </button>
+            <button type="button" class="btn btn-danger" id="reload-btn">
+                Reload
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/api.js"></script>
+    <script src="./js/control.js"></script>
+  </body>
+</html>

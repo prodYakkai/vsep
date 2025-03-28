@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WHEP Ingest Page</title>
+
+    <link rel="stylesheet" href="./css/projection.css" />
+    <script src="./node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="./node_modules/webrtc-adapter/out/adapter.js"></script>
+    <script src="./node_modules/socket.io-client/dist/socket.io.min.js"></script>
+    <script src="./js/srs.sdk.js"></script>
+  </head>
+  <body>
+    <video id="rtc_media_player" class="vid-container"></video>
+    <script src="./js/utils.js"></script>
+    <script src="./js/api.js"></script>
+    <script>
+      let socket = null;
+      let sdk = null;
+      let apiSdk = null;
+      let projectionState = {};
+      // projection id is the query parameter in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const projectionId = urlParams.get('id') || '1'; // Default to '1' if no id is provided
+
+      const videoElm = $('#rtc_media_player')[0];
+
+      $(document).ready(async () => {
+        await getMediaDeviceInfo();
+        $('#rtc_media_player').hide();
+        socket = io(
+          window.location.host !== '' ? window.location.origin : 'https://localhost:3000',
+        );
+        apiSdk = apiSdkService(
+          window.location.host !== '' ? window.location.origin : 'https://localhost:3000',
+        );
+        socket.on('connect', handleOnSocketConnect);
+
+        socket.on('disconnect', function () {
+          console.log('Disconnected from server');
+        });
+
+        socket.on('error', function (error) {
+          console.error('Error:', error);
+        });
+
+        socket.on('action', handleSocketAction);
+        socket.on('audioDevice', handleUpdateAudioDevice);
+        socket.on('job', () => {
+          console.log('Job received');
+          loadProjectionState();
+        });
+        navigator.mediaDevices.addEventListener('devicechange', async () => {
+          console.log('Device change detected');
+          await getMediaDeviceInfo();
+          syncMediaDevices();
+        });
+      });
+
+      const handleOnSocketConnect = async () => {
+        console.log('Connected to server');
+        loadProjectionState();
+        await getMediaDeviceInfo();
+        syncMediaDevices();
+      };
+
+      const handleSocketAction = async (action) => {
+        console.log('Action received:', action);
+        switch (action.action) {
+          case 'stop':
+            console.log('Stopping video');
+            videoElm.pause();
+            break;
+          case 'play':
+            console.log('Playing video');
+            videoElm.play();
+            break;
+          case 'reload':
+            console.log('Reloading page');
+            window.location.reload();
+            break;
+          default:
+            console.warn('Unknown action type:', action.type);
+        }
+      };
+
+      const handleUpdateAudioDevice = async (device) => {
+        console.log('Audio device update received:', device);
+        const deviceCandidate = await lookupDevice(
+          device.deviceId,
+          device.label,
+        );
+        console.log('Device candidate:', deviceCandidate);
+        videoElm.setSinkId(deviceCandidate.deviceId);
+        syncMediaDevices();
+      };
+
+      const loadProjectionState = async () => {
+        const [err, state] = await safeAwait(
+          await apiSdk.fetchProjection(projectionId, 'whep', socket.id),
+        );
+        if (err) {
+          console.error('Error loading projection state:', err);
+          return;
+        }
+        projectionState = state;
+        $(function () {
+          startPlayWhep(projectionState.url, projectionState.activeDevice);
+        });
+        console.log('Projection state loaded:', state);
+        syncMediaDevices();
+      };
+
+      const syncMediaDevices = async () => {
+        const [err, devices] = await safeAwait(
+          navigator.mediaDevices.enumerateDevices(),
+        );
+        if (err) {
+          console.error('Error loading media devices:', err);
+          return;
+        }
+
+        if (!devices || devices.length === 0) {
+          console.warn('No media devices found');
+          return;
+        }
+        console.info('Syncing media devices....');
+        const audioOutputDevices = devices.filter(
+          (device) => device.kind === 'audiooutput',
+        );
+        const [errState, syncState] = await safeAwait(
+          apiSdk.updateProjectionDevices(
+            projectionId,
+            audioOutputDevices.map((device) => ({
+              deviceId: device.deviceId,
+              label: device.label,
+            })),
+            {
+              deviceId: videoElm.sinkId ? videoElm.sinkId : '',
+              label: videoElm.sinkId ? videoElm.sinkId : '',
+            },
+          ),
+        );
+      };
+
+      const startPlayWhep = function (url, device) {
+        $('#rtc_media_player').show();
+
+        // Close PC when user replay.
+        if (sdk) {
+          sdk.close();
+        }
+        sdk = new SrsRtcWhipWhepAsync(device);
+        sdk.pc.addEventListener('connectionstatechange',(event) => {
+            console.log('Connection state change:', event);
+            if (event.target.iceConnectionState === 'connected') { 
+                console.log('Connection established');
+            }
+        });
+        sdk.pc.addEventListener("iceconnectionstatechange", (event) => {
+            if (sdk.pc.iceConnectionState === "failed") {
+                /* possibly reconfigure the connection in some way here */
+                /* then request ICE restart */
+                sdk.pc.restartIce();
+            }
+        });
+
+        // User should set the stream when publish is done, @see https://webrtc.org/getting-started/media-devices
+        // However SRS SDK provides a consist API like https://webrtc.org/getting-started/remote-streams
+        $('#rtc_media_player').prop('srcObject', sdk.stream);
+
+        // Optional callback, SDK will add track to stream.
+        // sdk.ontrack = function (event) { console.log('Got track', event); sdk.stream.addTrack(event.track); };
+
+        // For example: webrtc://r.ossrs.net/live/livestream
+        sdk
+          .play(url, {
+            videoOnly: false,
+            audioOnly: false,
+          })
+          .then(async function (session) {
+            await videoElm.play();
+            handleUpdateAudioDevice(projectionState.activeDevice);
+          })
+          .catch(function (reason) {
+            sdk.close();
+            $('#vid-container').hide();
+            console.error(reason);
+          });
+      };
+    </script>
+  </body>
+</html>

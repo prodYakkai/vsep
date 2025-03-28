@@ -1,0 +1,19 @@
+[Unit]
+Description=Ingester Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /home/linux/ingester-web/dist/index.js
+Restart=always
+User=linux
+Group=linux
+Environment=PATH=/usr/bin:/usr/local/bin
+Environment=NODE_ENV=production
+WorkingDirectory=/home/linux/ingester-web
+Type=simple
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=ingester-web
+
+[Install]
+WantedBy=multi-user.target
