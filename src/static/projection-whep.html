@@ -150,6 +150,10 @@
       };
 
       const startPlayWhep = function (url, device) {
+        if (!url || url === '') {
+          console.error('Invalid URL provided for WHEP playback');
+          return;
+        }
         $('#test-card').hide();
         $('#rtc_media_player').show();
 

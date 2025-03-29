@@ -136,6 +136,17 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "npm install failed."
     exit $LASTEXITCODE
 }
+
+Write-Host "Static dir node modules installing dependencies..."
+# Change to the static directory
+Set-Location -Path "$appDir/src/static" | Out-Null
+npm install
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "npm install in src/static failed."
+    exit $LASTEXITCODE
+}
+Set-Location -Path "../../" | Out-Null # Return to the original directory
+
 # Build the Node.js app
 Write-Host "Building Node.js application..."
 npm run build
@@ -149,15 +160,6 @@ if (-not (Test-Path -Path "$appDir/dist/index.js")) {
     exit 1
 }
 
-Write-Host "Static dir node modules installing dependencies..."
-# Change to the static directory
-Set-Location -Path "$appDir/src/static" | Out-Null
-npm install
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "npm install in src/static failed."
-    exit $LASTEXITCODE
-}
-Set-Location -Path "../../" | Out-Null # Return to the original directory
 # Launch Node.js app with npm run start
 Write-Host "Starting Node.js application..."
 $nodeProcess = Start-Process -FilePath "node.exe" -ArgumentList "./dist/index.js" -WorkingDirectory $appDir -PassThru

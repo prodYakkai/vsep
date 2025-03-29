@@ -12,7 +12,6 @@ const getMediaDeviceInfo = async () => {
       streams.getTracks().forEach((track) => track.stop());
     } catch (error) {
         console.error('Error accessing media devices:', error);
-        return false;
     }
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioOutput = devices.find(
