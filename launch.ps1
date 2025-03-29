@@ -116,39 +116,48 @@ if (-not $portOpen) {
 }
 Write-Host "Port 6379 is open and listening!"
 
+# Pull git repository to ensure we have the latest code
+Write-Host "Pulling latest code from git repository..."
+git pull
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Git pull failed. Please check your repository."
+    exit $LASTEXITCODE
+}
+
 # Install node app dependencies if not already installed
-if (-not (Test-Path -Path "$appDir/node_modules")) {
-    Write-Host "Node modules not found, installing dependencies..."
-    # Ensure the directory exists
-    if (-not (Test-Path -Path $appDir)) {
-        New-Item -ItemType Directory -Path $appDir -Force | Out-Null
-    }
-    Set-Location -Path $appDir | Out-Null
-    npm install
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "npm install failed."
-        exit $LASTEXITCODE
-    }
-    Set-Location -Path ".." | Out-Null # Return to the original directory
-} else {
-    Write-Host "Node modules already installed."
+Write-Host "Node modules installing dependencies..."
+# Ensure the directory exists
+if (-not (Test-Path -Path $appDir)) {
+    New-Item -ItemType Directory -Path $appDir -Force | Out-Null
+}
+Set-Location -Path $appDir | Out-Null
+npm install
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "npm install failed."
+    exit $LASTEXITCODE
+}
+# Build the Node.js app
+Write-Host "Building Node.js application..."
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "npm run build failed."
+    exit $LASTEXITCODE
+}
+# Check if the build was successful
+if (-not (Test-Path -Path "$appDir/dist/index.js")) {
+    Write-Error "Build failed: dist/index.js not found."
+    exit 1
 }
 
-# Install static dir npm dependencies if not already installed
-if (-not (Test-Path -Path "$appDir/src/static/node_modules")) {
-    Write-Host "Static dir node modules not found, installing dependencies..."
-    # Change to the static directory
-    Set-Location -Path "$appDir/src/static" | Out-Null
-    npm install
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "npm install in src/static failed."
-        exit $LASTEXITCODE
-    }
-    Set-Location -Path "../../" | Out-Null # Return to the original directory
-} else {
-    Write-Host "Static dir node modules already installed."
+Write-Host "Static dir node modules installing dependencies..."
+# Change to the static directory
+Set-Location -Path "$appDir/src/static" | Out-Null
+npm install
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "npm install in src/static failed."
+    exit $LASTEXITCODE
 }
-
+Set-Location -Path "../../" | Out-Null # Return to the original directory
 # Launch Node.js app with npm run start
 Write-Host "Starting Node.js application..."
 $nodeProcess = Start-Process -FilePath "node.exe" -ArgumentList "./dist/index.js" -WorkingDirectory $appDir -PassThru

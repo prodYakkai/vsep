@@ -7,8 +7,13 @@ const safeAwait = async (promise) => {
 }
 
 const getMediaDeviceInfo = async () => {
-    const streams = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); // Request permission
-    streams.getTracks().forEach((track) => track.stop());
+    try{
+      const streams = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); // Request permission
+      streams.getTracks().forEach((track) => track.stop());
+    } catch (error) {
+        console.error('Error accessing media devices:', error);
+        return false;
+    }
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioOutput = devices.find(
       (device) => device.kind === 'audiooutput',
