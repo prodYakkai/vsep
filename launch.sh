@@ -133,7 +133,9 @@ for monitor in "${monitors[@]}"; do
         /usr/bin/chromium-browser --chrome-frame --window-position="$x_offset,$y_offset" \
             --user-data-dir="/home/$(whoami)/vsep-profile/$monitor" --window-size="$width,$height" \
             --app="file:///home/$(whoami)/vsep/dist/static/projection-whep.html?id=$monitor" \
-            --autoplay-policy=no-user-gesture-required --kiosk --ignore-certificate-errors \
+            --autoplay-policy=no-user-gesture-required --kiosk --ignore-certificate-errors --remote-debugging-port=9222 \
+            --disable-web-security --disable-features=IsolateOrigins,site-per-process \
+            --disable-extensions --no-first-run --no-default-browser-check \
             --allow-hidden-media-playback --use-fake-ui-for-media-stream --test-type --suppress-badflags-warnings &
         
         # Store the PID of the launched Chromium process

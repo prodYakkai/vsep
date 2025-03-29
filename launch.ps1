@@ -226,6 +226,7 @@ foreach ($monitor in $screenInfo) {
         "--allow-hidden-media-playback",
         "--use-fake-ui-for-media-stream",
         "--test-type",
+        "--remote-debugging-port=9222",  # Enable remote debugging
         "--enable-exclusive-audio",
         "--ignore-certificate-errors",
         "--suppress-badflags-warnings" `
