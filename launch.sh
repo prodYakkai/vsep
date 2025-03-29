@@ -132,7 +132,7 @@ for monitor in "${monitors[@]}"; do
         # Launch Chromium window on the detected monitor
         /usr/bin/chromium-browser --chrome-frame --window-position="$x_offset,$y_offset" \
             --user-data-dir="/home/$(whoami)/vsep-profile/$monitor" --window-size="$width,$height" \
-            --app="file:///home/$(whoami)/ingester-web/dist/static/projection-whep.html?id=$monitor" \
+            --app="file:///home/$(whoami)/vsep/dist/static/projection-whep.html?id=$monitor" \
             --autoplay-policy=no-user-gesture-required --kiosk --ignore-certificate-errors \
             --allow-hidden-media-playback --use-fake-ui-for-media-stream --test-type --suppress-badflags-warnings &
         
