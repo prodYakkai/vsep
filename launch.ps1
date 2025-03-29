@@ -222,7 +222,7 @@ foreach ($monitor in $screenInfo) {
         "--user-data-dir=`"$configDir`"",
         "--app=file:///$appDir/dist/static/projection-whep.html?id=monitor$monitorCount",
         "--autoplay-policy=no-user-gesture-required",
-        # "--kiosk",
+        "--kiosk",
         "--allow-hidden-media-playback",
         "--use-fake-ui-for-media-stream",
         "--test-type",
