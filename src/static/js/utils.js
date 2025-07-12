@@ -1,3 +1,4 @@
+// Global utility functions available to all modules
 const safeAwait = async (promise) => {
   try {
     return [null, await promise];
@@ -46,3 +47,8 @@ const lookupDevice = async (deviceId, label='') => {
     console.warn('Device not found, defaulting to first device');
     return devices.find((d) => d.kind === 'audiooutput');
 };
+
+// Make functions available globally for both ES6 modules and legacy scripts
+window.safeAwait = safeAwait;
+window.getMediaDeviceInfo = getMediaDeviceInfo;
+window.lookupDevice = lookupDevice;

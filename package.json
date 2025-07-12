@@ -1,17 +1,33 @@
 {
-  "name": "ingester-web",
+  "name": "vsep",
   "version": "0.0.0",
-  "description": "A web server for ingesting data",
+  "description": "A very embedded player",
   "main": "dist/index.js",
   "license": "Apache-2.0",
   "scripts": {
     "build": "ts-node ./scripts/build.ts",
+    "build:prod": "npm run type-check && npm run build",
+    "clean": "rm -rf ./dist",
     "clean-install": "rm -rf ./node_modules && rm -r package-lock.json && npm i",
     "dev": "cross-env NODE_ENV=development ts-node ./src",
     "dev:hot": "nodemon --exec \"npm run dev\" --watch ./src --ext .ts",
+    "dev:chromium": "node dev-chromium.js",
+    "dev:debug": "cross-env NODE_ENV=development node --inspect=0.0.0.0:9229 -r ts-node/register ./src/index.ts",
+    "install:static": "cd src/static && npm install",
+    "install:all": "npm install && npm run install:static",
+    "launch": "node launcher.js",
+    "launch:dev": "node launcher.js --env development",
+    "launch:prod": "node launcher.js --env production",
+    "launch:no-kiosk": "node launcher.js --no-kiosk",
     "lint": "eslint --flag unstable_ts_config",
+    "lint:fix": "eslint --flag unstable_ts_config --fix",
+    "prestart": "npm run build:prod",
     "start": "cross-env NODE_ENV=production node ./dist/index.js",
-    "type-check": "tsc --noEmit"
+    "test": "jasmine",
+    "test:watch": "nodemon --exec \"npm test\" --watch ./src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch",
+    "postinstall": "npm run install:static"
   },
   "engines": {
     "node": ">=16.0.0"

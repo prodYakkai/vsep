@@ -1,0 +1,228 @@
+name: Build and Package VSEP
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    name: Build and Package
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            src/static/node_modules
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+            ${{ runner.os }}-node-
+      
+      - name: Install dependencies
+        run: npm run install:all
+      
+      - name: Run type checking
+        run: npm run type-check
+      
+      - name: Run linting
+        run: npm run lint
+      
+      - name: Run tests
+        run: npm test
+        continue-on-error: true  # Tests may not exist yet
+      
+      - name: Build project
+        run: npm run build:prod
+      
+      - name: Verify build artifacts
+        run: |
+          echo "=== Checking build output ==="
+          ls -la dist/
+          echo "=== Checking static build ==="
+          ls -la dist/static/ || echo "No static directory in dist"
+          echo "=== Checking required files ==="
+          test -f dist/index.js || (echo "Missing dist/index.js" && exit 1)
+          test -d keys/ || (echo "Missing keys directory" && exit 1)
+          test -d config/ || (echo "Missing config directory" && exit 1)
+          test -f package.json || (echo "Missing package.json" && exit 1)
+          test -f launcher.js || (echo "Missing launcher.js" && exit 1)
+      
+      - name: Create package directory
+        run: mkdir -p out
+      
+      - name: Create distribution package
+        run: |
+          echo "=== Creating VSEP distribution package ==="
+          
+          # Create package following package.sh but with optimizations
+          tar -czf out/vsep-${{ github.sha }}.tar.gz \
+            --exclude='node_modules/.cache' \
+            --exclude='node_modules/*/test*' \
+            --exclude='node_modules/*/spec*' \
+            --exclude='node_modules/*/*.md' \
+            --exclude='node_modules/*/LICENSE*' \
+            --exclude='node_modules/*/CHANGELOG*' \
+            --exclude='node_modules/*/docs' \
+            --exclude='node_modules/*/examples' \
+            --exclude='node_modules/*/.github' \
+            --exclude='src/static/node_modules/.cache' \
+            --exclude='src/static/node_modules/*/test*' \
+            --exclude='src/static/node_modules/*/spec*' \
+            --exclude='src/static/node_modules/*/*.md' \
+            --exclude='src/static/node_modules/*/LICENSE*' \
+            --exclude='src/static/node_modules/*/CHANGELOG*' \
+            --exclude='src/static/node_modules/*/docs' \
+            --exclude='src/static/node_modules/*/examples' \
+            --exclude='src/static/node_modules/*/.github' \
+            dist/ \
+            keys/ \
+            config/ \
+            package.json \
+            package-lock.json \
+            *.sh \
+            *.ps1 \
+            launcher.js \
+            dev-chromium.js \
+            node_modules/ \
+            src/static/node_modules/ \
+            src/static/package.json \
+            src/static/package-lock.json \
+            README.md \
+            CLAUDE.md
+          
+          echo "=== Package created ==="
+          ls -lh out/
+      
+      - name: Create lightweight package (production only)
+        run: |
+          echo "=== Creating lightweight production package ==="
+          
+          # Create a minimal production package without dev dependencies
+          tar -czf out/vsep-production-${{ github.sha }}.tar.gz \
+            dist/ \
+            keys/ \
+            config/ \
+            package.json \
+            launcher.js \
+            README.md
+          
+          echo "=== Lightweight package created ==="
+          ls -lh out/
+      
+      - name: Generate package info
+        run: |
+          echo "=== Package Information ===" > out/package-info.txt
+          echo "Build Date: $(date -u)" >> out/package-info.txt
+          echo "Commit: ${{ github.sha }}" >> out/package-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> out/package-info.txt
+          echo "Node Version: ${{ matrix.node-version }}" >> out/package-info.txt
+          echo "Repository: ${{ github.repository }}" >> out/package-info.txt
+          echo "" >> out/package-info.txt
+          echo "=== Package Contents ===" >> out/package-info.txt
+          tar -tzf out/vsep-${{ github.sha }}.tar.gz | head -50 >> out/package-info.txt
+          echo "" >> out/package-info.txt
+          echo "=== Package Sizes ===" >> out/package-info.txt
+          ls -lh out/*.tar.gz >> out/package-info.txt
+          
+          cat out/package-info.txt
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsep-package-node-${{ matrix.node-version }}
+          path: |
+            out/vsep-*.tar.gz
+            out/package-info.txt
+          retention-days: 30
+      
+      - name: Upload production artifacts (Node 20 only)
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsep-production-package
+          path: |
+            out/vsep-production-*.tar.gz
+            out/package-info.txt
+          retention-days: 90
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build-and-package
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vsep-package-node-20.x
+          path: artifacts/
+      
+      - name: Download production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vsep-production-package
+          path: artifacts/
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/vsep-*.tar.gz
+          body: |
+            ## VSEP Release ${{ github.ref_name }}
+            
+            **Built from commit:** ${{ github.sha }}
+            **Build date:** ${{ github.run_started_at }}
+            
+            ### Package Types
+            - `vsep-<commit>.tar.gz` - Full package with all dependencies
+            - `vsep-production-<commit>.tar.gz` - Lightweight production package
+            
+            ### Installation
+            ```bash
+            # Extract the package
+            tar -xzf vsep-*.tar.gz
+            
+            # For full package, run directly
+            node launcher.js
+            
+            # For production package, install dependencies first
+            npm install --production
+            node launcher.js
+            ```
+            
+            ### Requirements
+            - Node.js 16.0.0 or higher
+            - Redis server on port 6379
+            - Valid SSL certificates in keys/ directory
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

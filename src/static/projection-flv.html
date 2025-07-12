@@ -4,9 +4,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FLV Ingest Page</title>
+    
+    <link rel="stylesheet" href="./css/projection.css" />
+    <script src="./node_modules/socket.io-client/dist/socket.io.min.js"></script>
+    <script src="./node_modules/mpegts.js/dist/mpegts.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/api.js"></script>
 </head>
 <body>
+    <video id="flv_media_player" class="vid-container" controls></video>
     
-    <script src="/socket.io/socket.io.js"></script>
+    
+    <div id="test-card">
+      <div class="test-card-header">
+        VSEP - FLV PROJECTION SYSTEM
+      </div>
+      
+      <div class="test-card-grid">
+        <div class="test-card-section">
+          <h3>Display Information</h3>
+          <div class="test-card-info">
+            <span class="test-card-label">Monitor ID:</span>
+            <span class="test-card-value" id="monitor-id">Loading...</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Resolution:</span>
+            <span class="test-card-value" id="screen-resolution">Loading...</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Status:</span>
+            <span class="test-card-status status-connecting" id="display-status">INITIALIZING</span>
+          </div>
+        </div>
+        
+        <div class="test-card-section">
+          <h3>Audio Configuration</h3>
+          <div class="test-card-info">
+            <span class="test-card-label">Output Device:</span>
+            <span class="test-card-value" id="audio-device">Loading...</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Audio Status:</span>
+            <span class="test-card-status status-connecting" id="audio-status">CHECKING</span>
+          </div>
+        </div>
+        
+        <div class="test-card-section">
+          <h3>Network Information</h3>
+          <div class="test-card-info">
+            <span class="test-card-label">Protocol:</span>
+            <span class="test-card-value">FLV/HTTP</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Connection:</span>
+            <span class="test-card-status status-connecting" id="network-status">CONNECTING</span>
+          </div>
+        </div>
+        
+        <div class="test-card-section">
+          <h3>Display Status</h3>
+          <div class="test-card-info">
+            <span class="test-card-label">Fullscreen:</span>
+            <span class="test-card-status status-connecting" id="fullscreen-status">CHECKING</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Mouse Cursor:</span>
+            <span class="test-card-status status-ready" id="mouse-status">HIDDEN</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Page Focus:</span>
+            <span class="test-card-status status-ready" id="focus-status">FOCUSED</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Page Visibility:</span>
+            <span class="test-card-status status-ready" id="visibility-status">VISIBLE</span>
+          </div>
+        </div>
+        
+        <div class="test-card-section">
+          <h3>System Information</h3>
+          <div class="test-card-info">
+            <span class="test-card-label">User Agent:</span>
+            <span class="test-card-value" id="user-agent">Loading...</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Media Support:</span>
+            <span class="test-card-status status-ready" id="media-support">SUPPORTED</span>
+          </div>
+          <div class="test-card-info">
+            <span class="test-card-label">Performance:</span>
+            <span class="test-card-value" id="performance-info">Good</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="test-card-footer">
+        <div class="test-card-timestamp" id="timestamp">Loading...</div>
+        <div class="test-card-version">VSEP v1.0.0</div>
+      </div>
+    </div>
+    
+    <script type="module">
+      import { FLVProjection } from './js/framework/FLVProjection.js';
+      
+      // Get projection ID from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const projectionId = urlParams.get('id') || '1';
+      
+      // Initialize FLV projection
+      const projection = new FLVProjection(projectionId);
+      
+      // Clean up on page unload
+      window.addEventListener('beforeunload', () => {
+        projection.destroy();
+      });
+    </script>
 </body>
 </html>

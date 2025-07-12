@@ -1,3 +1,4 @@
+// API service factory function
 const apiSdkService = (
     BASE_URL = window.location.origin,
 ) => {
@@ -72,6 +73,13 @@ const apiSdkService = (
             .then((response) => response.json());
     }
 
+    const deleteProjection = async (id) => {
+        return fetch(`${API_URL}/projection/${id}`, {
+            method: 'DELETE'
+        })
+            .then((response) => response.json());
+    }
+
     self = {
         fetchAllProjections,
         fetchProjection,
@@ -79,8 +87,12 @@ const apiSdkService = (
         updateProjectionDevices,
         updateProjectionDevice,
         fetchProjectionDevices,
-        submitProjectionJob
+        submitProjectionJob,
+        deleteProjection
     }
 
     return self;
 }
+
+// Make API service available globally for both ES6 modules and legacy scripts
+window.apiSdkService = apiSdkService;

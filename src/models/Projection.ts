@@ -3,6 +3,7 @@ export interface ProjectionState {
     
     url: string;
     type: 'whep' | 'flv';
+    playbackStatus?: 'playing' | 'stopped' | 'idle';
 
     mediaDevices?: MediaDeviceInfo[];
     activeDevice: MediaDeviceInfo | null;

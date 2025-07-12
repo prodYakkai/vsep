@@ -8,41 +8,246 @@
       rel="stylesheet"
       href="/node_modules/bootstrap/dist/css/bootstrap.min.css"
     />
-
+    <style>
+      /* Control locking styles */
+      .controls-locked {
+        position: relative;
+      }
+      
+      .controls-locked::before {
+        content: "🔒 CONTROLS LOCKED - Stream Active";
+        position: absolute;
+        top: -35px;
+        left: 0;
+        right: 0;
+        background: #ffc107;
+        color: #212529;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        z-index: 10;
+      }
+      
+      .controls-locked input:disabled,
+      .controls-locked select:disabled,
+      .controls-locked button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      /* Pulse animation for stop button when stream is active */
+      .controls-locked .btn-danger {
+        animation: pulse-danger 2s infinite;
+      }
+      
+      @keyframes pulse-danger {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+      }
+    </style>
     <script src="/node_modules/jquery/dist/jquery.min.js"></script>
   </head>
   <body>
-    <div class="container">
-      <h1>Ingest Control <span id="connection-status"></span></h1>
-      <nav>
-        <div class="nav nav-tabs" id="nav-tab" role="tablist">
-        
-        </div>
-      </nav>
+    <div class="container-fluid">
       <div class="row">
-        <div class="col-md-12">
-          <div class="form-group">
-            <label for="url-input">Stream URL</label>
-            <input
-              type="text"
-              class="form-control"
-              id="url-input"
-              placeholder="Enter stream URL"
-            />
-            <label for="sink-select">Audio Device</label>
-            <select class="form-control" id="sink-select">
-            </select>
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+            <h1 class="h3 mb-0">VSEP Projection Control</h1>
+            <span id="connection-status" class="badge text-bg-secondary">Connecting...</span>
           </div>
-          <div class="btn-group" role="group" aria-label="Control buttons">
-            <button type="button" class="btn btn-primary" id="flv-play">
-              FLV Play
+        </div>
+      </div>
+      
+      <div class="row mt-3">
+        <div class="col-3">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Projection Screens</h5>
+              <div>
+                <button class="btn btn-sm btn-outline-info" id="show-all-test-cards-btn" title="Show All Test Cards">
+                  📺 Show All
+                </button>
+                <button class="btn btn-sm btn-outline-dark" id="hide-all-test-cards-btn" title="Hide All Test Cards">
+                  🚫 Hide All
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="refresh-btn" title="Refresh">
+                  ↻
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush" id="screen-list">
+                <!-- Screen tabs will be populated here -->
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-9">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Screen Configuration: <span id="active-screen-title">None Selected</span></h5>
+              <div>
+                <span id="screen-status" class="badge text-bg-secondary">Unknown</span>
+                <button class="btn btn-sm btn-outline-danger" id="delete-screen-btn" style="display: none;">Delete</button>
+              </div>
+            </div>
+            <div class="card-body" id="screen-config">
+              <div id="no-selection" class="text-center text-muted py-5">
+                <h4>No Screen Selected</h4>
+                <p>Select a projection screen from the left panel to configure it.</p>
+              </div>
+              
+              <div id="screen-controls" style="display: none;">
+                <div class="row">
+                  <div class="col-md-8">
+                    <div class="form-group">
+                      <label for="url-input">Stream URL</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="url-input"
+                        placeholder="Enter stream URL"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <label for="sink-select">Audio Device</label>
+                      <select class="form-control" id="sink-select">
+                        <option value="">Loading...</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-12">
+                    <div class="btn-group mr-2" role="group" aria-label="Playback controls">
+                      <button type="button" class="btn btn-primary" id="flv-play">
+                        <strong>FLV</strong> Play
+                      </button>
+                      <button type="button" class="btn btn-info" id="rtc-play">
+                        <strong>WHEP</strong> Play
+                      </button>
+                    </div>
+                    
+                    <div class="btn-group mr-2" role="group" aria-label="Screen controls">
+                      <button type="button" class="btn btn-warning" id="stop-btn">
+                        Stop
+                      </button>
+                      <button type="button" class="btn btn-secondary" id="reload-btn">
+                        Reload
+                      </button>
+                    </div>
+                    
+                    <div class="btn-group mr-2" role="group" aria-label="Test card controls">
+                      <button type="button" class="btn btn-outline-info" id="show-test-card-btn">
+                        Show Test Card
+                      </button>
+                      <button type="button" class="btn btn-outline-dark" id="hide-test-card-btn">
+                        Hide Test Card
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row mt-3">
+                  <div class="col-md-6">
+                    <div class="card bg-light">
+                      <div class="card-body">
+                        <h6 class="card-title">Screen Information</h6>
+                        <div class="row">
+                          <div class="col-md-6">
+                            <small class="text-muted">Screen ID:</small><br>
+                            <span id="screen-id">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Protocol:</small><br>
+                            <span id="screen-protocol">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Active Device:</small><br>
+                            <span id="screen-active-device">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Last Updated:</small><br>
+                            <span id="screen-last-updated">-</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card bg-light">
+                      <div class="card-body">
+                        <h6 class="card-title">Connection Statistics 
+                          <small class="text-muted" id="connection-stats-protocol">(WHEP)</small>
+                        </h6>
+                        <div class="row">
+                          <div class="col-md-6">
+                            <small class="text-muted">RTT:</small><br>
+                            <span id="connection-rtt">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Packet Loss:</small><br>
+                            <span id="connection-packet-loss">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Bitrate:</small><br>
+                            <span id="connection-bitrate">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Frame Rate:</small><br>
+                            <span id="connection-frame-rate">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Resolution:</small><br>
+                            <span id="connection-resolution">-</span>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">Codec:</small><br>
+                            <span id="connection-codec">-</span>
+                          </div>
+                        </div>
+                        <div class="mt-2">
+                          <small class="text-muted">Stats updated: <span id="connection-stats-updated">-</span></small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Delete Projection Screen</h5>
+            <button type="button" class="close" data-dismiss="modal">
+              <span>&times;</span>
             </button>
-            <button type="button" class="btn btn-secondary" id="rtc-play">
-              RTC Play
-            </button>
-            <button type="button" class="btn btn-danger" id="reload-btn">
-                Reload
-            </button>
+          </div>
+          <div class="modal-body">
+            <p>The projection screen "<strong id="delete-screen-name"></strong>" appears to be offline.</p>
+            <p>Would you like to delete this screen from the database?</p>
+            <div class="alert alert-warning">
+              <strong>Warning:</strong> This action cannot be undone. All configuration data for this screen will be permanently lost.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete Screen</button>
           </div>
         </div>
       </div>
@@ -52,6 +257,17 @@
     <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
     <script src="./js/utils.js"></script>
     <script src="./js/api.js"></script>
-    <script src="./js/control.js"></script>
+    
+    <script type="module">
+      import { ControlPanel } from './js/framework/ControlPanel.js';
+      
+      // Initialize control panel
+      const controlPanel = new ControlPanel();
+      
+      // Clean up on page unload
+      window.addEventListener('beforeunload', () => {
+        controlPanel.destroy();
+      });
+    </script>
   </body>
 </html>

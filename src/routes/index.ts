@@ -76,6 +76,7 @@ apiRouter.get('/projection/:id',
         id,
         url: '',
         type,
+        playbackStatus: 'idle',
         activeDevice: {
           deviceId: 'default',
           label: 'default',
@@ -113,6 +114,25 @@ apiRouter.post('/projection/:id/action',
       res.status(HttpStatusCodes.NOT_FOUND).send('Projection not found');
       return;
     }
+    
+    // Handle state-changing actions
+    if (action === 'stop') {
+      // Update projection state to clear URL and set status to stopped
+      const [projError, projData] = await safeAwait(redis.get(`projection:${id}`));
+      if (!projError && projData) {
+        const projection = JSON.parse(projData) as ProjectionState;
+        projection.url = '';
+        projection.playbackStatus = 'stopped';
+        
+        const [updateError] = await safeAwait(
+          redis.set(`projection:${id}`, JSON.stringify(projection))
+        );
+        if (updateError) {
+          logger.err(updateError);
+        }
+      }
+    }
+    
     io.to(data).emit('action', {
       action,
     });
@@ -272,6 +292,7 @@ apiRouter.post('/projection/:id/job',
     const state = JSON.parse(projState) as ProjectionState;
     state.url = job.url;
     state.type = job.type;
+    state.playbackStatus = 'playing';
     const [errState, _state] =
       await safeAwait(
         redis.set(`projection:${id}`, JSON.stringify(state)));
@@ -287,6 +308,38 @@ apiRouter.post('/projection/:id/job',
       job,
     });
 });
+
+apiRouter.delete('/projection/:id',
+  async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    
+    // Delete projection data
+    const [errorProjection] = await safeAwait(redis.del(`projection:${id}`));
+    if (errorProjection) {
+      res.status(HttpStatusCodes.INTERNAL_SERVER_ERROR).send('Error deleting projection');
+      return;
+    }
+    
+    // Delete associated socket ID
+    const [errorSocket] = await safeAwait(redis.del(`socketId:${id}`));
+    if (errorSocket) {
+      logger.warn(`Error deleting socket ID for projection ${id}: ${errorSocket}`);
+    }
+    
+    // Delete associated devices
+    const [errorDevices] = await safeAwait(redis.del(`devices:${id}`));
+    if (errorDevices) {
+      logger.warn(`Error deleting devices for projection ${id}: ${errorDevices}`);
+    }
+    
+    // Emit refresh to all sockets
+    io.sockets.emit('refresh');
+    
+    res.status(HttpStatusCodes.OK).json({
+      message: `Projection ${id} deleted successfully`,
+      id
+    });
+  });
 
 apiRouter.get('/reset_all',
   async (req: Request, res: Response): Promise<void> => {
